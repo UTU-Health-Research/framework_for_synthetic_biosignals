@@ -7,7 +7,7 @@ import warnings
 
 @dataclass
 class BeatIntervalGenerator():
-
+    #Not all the parameters are randomized but the randomization can be added
     n: int = 30
     duration: float = None
     beat_intervals: list = None
