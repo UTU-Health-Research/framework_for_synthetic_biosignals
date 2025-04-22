@@ -5,6 +5,7 @@ from utils import default_field, min_max_normalize
 import warnings
 from noise_generator import NoiseGenerator
 import matplotlib.pyplot as plt
+import math
 
 
 @dataclass
@@ -21,19 +22,18 @@ class BeatIntervalGenerator():
     std: float = 0.5
     std_rng: list = default_field([0.45, 0.55])
     b: float = 0.075
-    y_amp: float = 0 #if hrv components used y_amp should be set to 0
+    yc: float = 0 #if hrv components used y_amp should be set to 0
     #breathing modulation   
-    bc: float = 0.1
+    bc: float = 0.1 #if hrv components used breath_amp should be set to 0
     bf: float = 1/3.6
-    breath_amp: float = 0 #if hrv components used breath_amp should be set to 0
     #hrv components
     lf:float = 0.1
-    lfc: float = 0.05
+    lf_power: float = 0.05
     hf: float = 0.25
-    hfc: float = 0.1
+    hf_power: float = 0.1
     vlf: float = 0.01
-    vlfc: float = 0.05
-    hrv_amp: float = 0.1 #if stochastic and breathing component used, set to 0
+    vlf_power: float = 0.05
+    hrvc: float = 0.1 #if stochastic and breathing component used, set to 0
     #mean beat interval after step change
     mu_new: float = 0.75
     mu_new_rng: list = default_field([0.3, 2])
@@ -56,13 +56,12 @@ class BeatIntervalGenerator():
             Generated beat intervals.
         """
         
-        if self.duration:
-            self.n = int(8*self.duration/np.min([self.mu, self.mu_new]))
 
         if self.beat_intervals is None:
             breathing_gen = lambda bf, bc, br_prev: bc*np.sin(2*np.pi*br_prev*bf)
             y = self._stochastic(self.n, self.a, self.std, self.b)    
             hrv_components = self._hrv_gen()
+
         
             z = np.zeros(self.n)
             if self.step:       
@@ -70,7 +69,7 @@ class BeatIntervalGenerator():
             intervals = np.zeros(self.n)
             for i in np.arange(self.n):  
                 br_prev = np.sum(intervals)
-                intervals[i] = self.mu*(1+z[i]) + self.breath_amp * breathing_gen(self.bf, self.bc, br_prev) + self.y_amp * y[i] + self.hrv_amp * hrv_components[i]
+                intervals[i] = self.mu*(1+z[i])  + breathing_gen(self.bf, self.bc, br_prev) + self.yc * y[i] + self.hrvc * hrv_components[i]
                 # scales the effect of breathing for rr intervals < 0.35 to avoid negative values 
                 if intervals[i] < 0.35:
                     intervals[i] = self.mu*(1+z[i]) * (1 + breathing_gen(self.bf, self.bc, br_prev))
@@ -106,17 +105,17 @@ class BeatIntervalGenerator():
         std3 = 2 * np.pi * 0.01
 
         df = 1 / self.n
-        f = np.arange(int(self.n/2)) * 2 * np.pi * df
+        f = np.arange(math.ceil(self.n/2)) * 2 * np.pi * df
         df1 = f - f1
         df2 = f - f2
         df3 = f - f3
 
-        psd1 = self.lfc * np.exp(-0.5 * (df1 / std1) ** 2) / np.sqrt(2 * np.pi * std1 ** 2)
-        psd2 = self. hfc * np.exp(-0.5 * (df2 / std2) ** 2) / np.sqrt(2 * np.pi * std2 ** 2)
-        psd3 = self.vlfc * np.exp(-0.5 * (df3 / std3) ** 2) / np.sqrt(2 * np.pi * std3 ** 2)
+        psd1 = self.lf_power * np.exp(-0.5 * (df1 / std1) ** 2) / np.sqrt(2 * np.pi * std1 ** 2)
+        psd2 = self.hf_power * np.exp(-0.5 * (df2 / std2) ** 2) / np.sqrt(2 * np.pi * std2 ** 2)
+        psd3 = self.vlf_power * np.exp(-0.5 * (df3 / std3) ** 2) / np.sqrt(2 * np.pi * std3 ** 2)
         psd = psd1 + psd2 + psd3
 
-        freq = np.linspace(df, fs/2, int(self.n/2))
+        freq = np.linspace(df, fs/2, math.ceil(self.n/2))
 
         time, y = self.noise_generator._psd2time(freq, psd)
 
@@ -136,9 +135,8 @@ class BeatIntervalGenerator():
         """
 
         tau_constant = 3
-        # distance = self.step_i*self.n
+        distance = self.step_i*self.n
         x = np.linspace(1, self.n, int(self.n))
-        distance = int(self.step_i*self.duration/self.mu)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             z = ((self.mu_new/self.mu)-1)/(1 + np.exp(-(x-distance)/self.step_f*tau_constant))
