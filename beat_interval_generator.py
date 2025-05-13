@@ -1,8 +1,11 @@
 import numpy as np
 from dataclasses import dataclass
 import random
-from utils import default_field
+from utils import default_field, min_max_normalize
 import warnings
+from noise_generator import NoiseGenerator
+import matplotlib.pyplot as plt
+import math
 
 
 @dataclass
@@ -14,12 +17,23 @@ class BeatIntervalGenerator():
     #mean beat interval
     mu: float = 1.0
     mu_rng: list = default_field([0.4, 1.2])
+    #stochastic
     a: float = 1.2
     std: float = 0.5
     std_rng: list = default_field([0.45, 0.55])
     b: float = 0.075
-    bc: float = 0.1
+    yc: float = 0 #if hrv components used y_amp should be set to 0
+    #breathing modulation   
+    bc: float = 0.1 #if hrv components used breath_amp should be set to 0
     bf: float = 1/3.6
+    #hrv components
+    lf:float = 0.1
+    lf_power: float = 0.05
+    hf: float = 0.25
+    hf_power: float = 0.1
+    vlf: float = 0.01
+    vlf_power: float = 0.05
+    hrvc: float = 0.1 #if stochastic and breathing component used, set to 0
     #mean beat interval after step change
     mu_new: float = 0.75
     mu_new_rng: list = default_field([0.3, 2])
@@ -31,6 +45,7 @@ class BeatIntervalGenerator():
     step_prob: float = 0.5
     step_min: float = 0.3
     step_max: float = 2
+    noise_generator: NoiseGenerator = default_field(NoiseGenerator())
 
     def generate(self):
         """
@@ -41,12 +56,12 @@ class BeatIntervalGenerator():
             Generated beat intervals.
         """
         
-        if self.duration:
-            self.n = int(8*self.duration/np.min([self.mu, self.mu_new]))
 
         if self.beat_intervals is None:
             breathing_gen = lambda bf, bc, br_prev: bc*np.sin(2*np.pi*br_prev*bf)
             y = self._stochastic(self.n, self.a, self.std, self.b)    
+            hrv_components = self._hrv_gen()
+
         
             z = np.zeros(self.n)
             if self.step:       
@@ -54,7 +69,7 @@ class BeatIntervalGenerator():
             intervals = np.zeros(self.n)
             for i in np.arange(self.n):  
                 br_prev = np.sum(intervals)
-                intervals[i] = self.mu*(1+z[i]) + breathing_gen(self.bf, self.bc, br_prev) + y[i]   
+                intervals[i] = self.mu*(1+z[i])  + breathing_gen(self.bf, self.bc, br_prev) + (self.yc * y[i]) + (self.hrvc * hrv_components[i])
                 # scales the effect of breathing for rr intervals < 0.35 to avoid negative values 
                 if intervals[i] < 0.35:
                     intervals[i] = self.mu*(1+z[i]) * (1 + breathing_gen(self.bf, self.bc, br_prev))
@@ -72,6 +87,42 @@ class BeatIntervalGenerator():
 
         return intervals
     
+    def _hrv_gen(self) -> np.ndarray:
+        """
+        Generates high, low and very low frequency components of HRV.
+
+        Returns
+        ---------
+        HRV components of the beat intervals
+        """
+
+        fs = 1/self.mu
+        f1 = 2 * np.pi * self.lf/fs
+        f2 = 2 * np.pi * self.hf/fs
+        f3 = 2 * np.pi * self.vlf/fs
+        w1 = 2 * np.pi * 0.01
+        w2 = 2 * np.pi * 0.01
+        w3 = 2 * np.pi * 0.01
+
+        df = 1 / self.n
+        f = np.arange(math.ceil(self.n/2)) * 2 * np.pi * df
+        df1 = f - f1
+        df2 = f - f2
+        df3 = f - f3
+
+        psd1 = self.lf_power * np.exp((-1 * (df1) ** 2) / (2 * w1 ** 2))
+        psd2 = self.hf_power * np.exp((-1* (df2) ** 2) / (2 * w2 ** 2))
+        psd3 = self.vlf_power * np.exp((-1 * (df3) ** 2) / (2 * w3 ** 2))
+        psd = psd1 + psd2 + psd3
+
+        freq = np.linspace(df, fs/2, math.ceil(self.n/2))
+
+        time, y = self.noise_generator._psd2time(freq, psd)
+
+        y = min_max_normalize(y, -1, 1)
+
+        return y
+    
     def _gen_hr_step(self) -> np.ndarray:
         """
         Generates the change in the heart rate.
@@ -84,9 +135,8 @@ class BeatIntervalGenerator():
         """
 
         tau_constant = 3
-        # distance = self.step_i*self.n
+        distance = self.step_i*self.n
         x = np.linspace(1, self.n, int(self.n))
-        distance = int(self.step_i*self.duration/self.mu)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             z = ((self.mu_new/self.mu)-1)/(1 + np.exp(-(x-distance)/self.step_f*tau_constant))
