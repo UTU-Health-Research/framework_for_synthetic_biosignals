@@ -58,22 +58,21 @@ class PPGGenerator(SignalGenerator):
         noise_labels = []
 
         if self.noise_generator is not None:
-            self.beat_interval_generator.duration = None
+            self.beat_interval_generator.n = None
             self.noise_generator.fs = self.fs
-            noise_signal, noise_labels = self.noise_generator.generate()           
+            noise_signal, noise_labels = self.noise_generator.generate()     
 
             if self.noise_generator.noise_list:
                 dur = 0
                 for item in self.noise_generator.noise_list:
                     dur += item.duration
-                self.beat_interval_generator.duration = dur
+                self.beat_interval_generator.n = int(dur)
+                self.number_of_beats = dur
             else:
-                self.beat_interval_generator.duration = self.noise_generator.noise_type.duration
+                self.beat_interval_generator.n = int(self.noise_generator.noise_type.duration)
 
-        self.beat_interval_generator.n = self.number_of_beats
+        self.beat_interval_generator.n = int(self.number_of_beats)
         beat_intervals = self.beat_interval_generator.generate()
-        if self.beat_interval_generator.duration is None:
-            self.beat_interval_generator.duration = np.sum(beat_intervals)
         signal_, beat_intervals = super().generate(beat_intervals, self.fs)
 
         # Find peaks.
@@ -104,8 +103,8 @@ class PPGGenerator(SignalGenerator):
         if self.noise_generator is not None:
             signal_, peak_inds, noise_labels = self.noise_generator.combine_signal_noise(signal_, noise_signal, peak_inds, noise_labels)       
 
-        signal_ = signal_[:int(self.fs*self.beat_interval_generator.duration)]
-        peak_inds = peak_inds[:int(self.fs*self.beat_interval_generator.duration)]
+        signal_ = signal_[:int(self.fs*self.beat_interval_generator.n)]
+        peak_inds = peak_inds[:int(self.fs*self.beat_interval_generator.n)]
 
         return signal_, peak_inds, noise_labels, beat_intervals/self.fs
     
@@ -134,7 +133,7 @@ class PPGGenerator(SignalGenerator):
         
         signals, peak_inds, noise_labels, beats_list = [], [], [], []
         
-        self.beat_interval_generator.duration = duration
+        self.beat_interval_generator.n = int(duration/self.beat_interval_generator.mu)
         for _ in range(number_of_signals):
             x = np.random.uniform(0, 1)
             self.ppg_distance = self._randomize_prms(self.ppg_distance_low, self.ppg_distance_high, x)
