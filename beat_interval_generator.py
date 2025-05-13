@@ -12,7 +12,6 @@ import math
 class BeatIntervalGenerator():
     #Not all the parameters are randomized but the randomization can be added
     n: int = 30
-    duration: float = None
     beat_intervals: list = None
     #mean beat interval
     mu: float = 1.0
@@ -74,8 +73,8 @@ class BeatIntervalGenerator():
                 if intervals[i] < 0.35:
                     intervals[i] = self.mu*(1+z[i]) * (1 + breathing_gen(self.bf, self.bc, br_prev))
                 
-                if self.duration:
-                    if np.sum(intervals) >= self.duration:
+                if self.n:
+                    if np.sum(intervals) >= self.n:
                         intervals = intervals[:i+1]
                         self.n = len(intervals)
                         break
