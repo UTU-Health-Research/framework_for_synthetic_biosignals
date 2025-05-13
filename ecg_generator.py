@@ -78,8 +78,6 @@ class ECGGenerator(SignalGenerator):
                 self.beat_interval_generator.duration = self.noise_generator.noise_type.duration
 
         self.beat_interval_generator.n = self.number_of_beats
-        if self.beat_interval_generator.duration is None:
-            self.beat_interval_generator.duration = self.number_of_beats
         beat_intervals = self.beat_interval_generator.generate()
         if self.beat_interval_generator.duration is None:
             self.beat_interval_generator.duration = np.sum(beat_intervals)

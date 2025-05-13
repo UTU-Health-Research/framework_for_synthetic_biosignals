@@ -69,7 +69,7 @@ class BeatIntervalGenerator():
             intervals = np.zeros(self.n)
             for i in np.arange(self.n):  
                 br_prev = np.sum(intervals)
-                intervals[i] = self.mu*(1+z[i])  + breathing_gen(self.bf, self.bc, br_prev) + self.yc * y[i] + self.hrvc * hrv_components[i]
+                intervals[i] = self.mu*(1+z[i])  + breathing_gen(self.bf, self.bc, br_prev) + (self.yc * y[i]) + (self.hrvc * hrv_components[i])
                 # scales the effect of breathing for rr intervals < 0.35 to avoid negative values 
                 if intervals[i] < 0.35:
                     intervals[i] = self.mu*(1+z[i]) * (1 + breathing_gen(self.bf, self.bc, br_prev))
@@ -100,9 +100,9 @@ class BeatIntervalGenerator():
         f1 = 2 * np.pi * self.lf/fs
         f2 = 2 * np.pi * self.hf/fs
         f3 = 2 * np.pi * self.vlf/fs
-        std1 = 2 * np.pi * 0.01
-        std2 = 2 * np.pi * 0.01
-        std3 = 2 * np.pi * 0.01
+        w1 = 2 * np.pi * 0.01
+        w2 = 2 * np.pi * 0.01
+        w3 = 2 * np.pi * 0.01
 
         df = 1 / self.n
         f = np.arange(math.ceil(self.n/2)) * 2 * np.pi * df
@@ -110,9 +110,9 @@ class BeatIntervalGenerator():
         df2 = f - f2
         df3 = f - f3
 
-        psd1 = self.lf_power * np.exp(-0.5 * (df1 / std1) ** 2) / np.sqrt(2 * np.pi * std1 ** 2)
-        psd2 = self.hf_power * np.exp(-0.5 * (df2 / std2) ** 2) / np.sqrt(2 * np.pi * std2 ** 2)
-        psd3 = self.vlf_power * np.exp(-0.5 * (df3 / std3) ** 2) / np.sqrt(2 * np.pi * std3 ** 2)
+        psd1 = self.lf_power * np.exp((-1 * (df1) ** 2) / (2 * w1 ** 2))
+        psd2 = self.hf_power * np.exp((-1* (df2) ** 2) / (2 * w2 ** 2))
+        psd3 = self.vlf_power * np.exp((-1 * (df3) ** 2) / (2 * w3 ** 2))
         psd = psd1 + psd2 + psd3
 
         freq = np.linspace(df, fs/2, math.ceil(self.n/2))
