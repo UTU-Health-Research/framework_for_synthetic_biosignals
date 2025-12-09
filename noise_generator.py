@@ -216,8 +216,8 @@ class NoiseGenerator():
         new_freq = np.linspace(freq[0], freq[-1], int(self.noise_type.duration*self.fs + 0.5), endpoint=True)
         psd, freq = interpolate_(freq, new_freq, psd, fill_value='extrapolate')
         time, y = self._psd2time(freq, psd)
-        if self.noise_type.name != 'model':
-            y = self.noise_type.amplitude*y/np.std(y)
+        #if self.noise_type.name != 'model':
+        y = self.noise_type.amplitude*y/np.std(y)
             
         return time, y
 
