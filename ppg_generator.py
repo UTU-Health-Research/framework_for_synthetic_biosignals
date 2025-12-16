@@ -145,6 +145,7 @@ class PPGGenerator(SignalGenerator):
                 self.noise_generator.noise_type.duration = duration
                 self.noise_generator.randomize()
 
+            self.number_of_beats = duration
             signal, peaks, label, beats = self.generate()
             signals.append(signal)
             peak_inds.append(peaks)
