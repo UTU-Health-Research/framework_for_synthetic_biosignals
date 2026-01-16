@@ -21,9 +21,9 @@ class BeatIntervalGenerator():
     std: float = 0.5
     std_rng: list = default_field([0.45, 0.55])
     b: float = 0.075
-    yc: float = 0 #if hrv components used y_amp should be set to 0
+    yc: float = 1 #if hrv components used yc should be set to 0, else default 1
     #breathing modulation   
-    bc: float = 0.1 #if hrv components used breath_amp should be set to 0
+    bc: float = 0.1 #if hrv components used bc should be set to 0, else default 0.1
     bf: float = 1/3.6
     #hrv components
     lf:float = 0.1
@@ -32,7 +32,7 @@ class BeatIntervalGenerator():
     hf_power: float = 0.1
     vlf: float = 0.01
     vlf_power: float = 0.05
-    hrvc: float = 0.1 #if stochastic and breathing component used, set to 0
+    hrvc: float = 0 #if stochastic and breathing component used, set to 0, else default 0.1
     #mean beat interval after step change
     mu_new: float = 0.75
     mu_new_rng: list = default_field([0.3, 2])
@@ -216,3 +216,4 @@ class BeatIntervalGenerator():
         self.step_f = x(self.step_f_rng[0], self.step_f_rng[1])
         self.step = random.choices([True, False], weights=[self.step_prob, 1-self.step_prob])[0]
         
+
