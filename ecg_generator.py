@@ -205,6 +205,7 @@ class ECGGenerator(SignalGenerator):
             futures = {}
             for b in batches:
                 f = executor.submit(self.generate_random_set, b, duration)
+                f.result()
                 futures[f] = f
             futures_count = len(futures)
             futures_completed_count = 0
