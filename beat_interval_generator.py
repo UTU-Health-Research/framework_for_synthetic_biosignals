@@ -18,21 +18,33 @@ class BeatIntervalGenerator():
     mu_rng: list = default_field([0.4, 1.2])
     #stochastic
     a: float = 1.2
+    a_rng: list = default_field([1.0, 1.4])
     std: float = 0.5
     std_rng: list = default_field([0.45, 0.55])
     b: float = 0.075
-    yc: float = 1 #if hrv components used yc should be set to 0, else default 1
+    b_rng: list = default_field([0.05, 0.1])
+    yc: float = 1
     #breathing modulation   
-    bc: float = 0.1 #if hrv components used bc should be set to 0, else default 0.1
+    hrv_method1: bool = True #if hrv components (method 2) used should be set to False
+    bc: float = 0.1 
+    bc_rng: list = default_field([0.01, 0.1])
     bf: float = 1/3.6
+    bf_rng: list = default_field([1/3, 1/5])
     #hrv components
     lf:float = 0.1
+    lf_rng: list = default_field([0.04, 0.14])
     lf_power: float = 0.05
+    lf_power_rng: list = default_field([0.01, 0.1])
     hf: float = 0.25
+    hf_rng: list = default_field([0.16, 0.4])
     hf_power: float = 0.1
+    hf_power_rng: list = default_field([0.01, 0.1])
     vlf: float = 0.01
+    vlf_rng: list = default_field([0.0003, 0.038])
     vlf_power: float = 0.05
-    hrvc: float = 0 #if stochastic and breathing component used, set to 0, else default 0.1
+    vlf_power_rng: list = default_field([0.01, 0.1])
+    hrvc: float = 0.5
+    hrvc_rng: list = default_field([0.1, 1])
     #mean beat interval after step change
     mu_new: float = 0.75
     mu_new_rng: list = default_field([0.3, 2])
@@ -60,6 +72,11 @@ class BeatIntervalGenerator():
             breathing_gen = lambda bf, bc, br_prev: bc*np.sin(2*np.pi*br_prev*bf)
             y = self._stochastic(self.n, self.a, self.std, self.b)    
             hrv_components = self._hrv_gen()
+            if self.hrv_method1: 
+                self.hrvc = 0
+            else:
+                self.bc = 0
+                self.yc = 0
 
         
             z = np.zeros(self.n)
@@ -210,6 +227,18 @@ class BeatIntervalGenerator():
         
         self.mu = x(self.mu_rng[0], self.mu_rng[1])
         self.std = x(self.std_rng[0], self.std_rng[1])
+
+        self.a = x(self.a_rng[0], self.a_rng[1])
+        self.b = x(self.b_rng[0], self.b_rng[1])
+        self.bc = x(self.bc_rng[0], self.bc_rng[1])
+        self.bf = x(self.bf_rng[0], self.bf_rng[1])
+        self.lf = x(self.lf_rng[0], self.lf_rng[1])
+        self.hf = x(self.hf_rng[0], self.hf_rng[1])
+        self.vlf = x(self.vlf_rng[0], self.vlf_rng[1])
+        self.lf_power = x(self.lf_power_rng[0], self.lf_power_rng[1])
+        self.hf_power = x(self.hf_power_rng[0], self.hf_power_rng[1])
+        self.vlf_power = x(self.vlf_power_rng[0], self.vlf_power_rng[1])
+        self.hrvc = x(self.hrvc_rng[0], self.hrvc_rng[1])
         
         self.step_size = x(self.mu_new_rng[0], self.mu_new_rng[1])
         self.step_i = x(self.step_i_rng[0], self.step_i_rng[1])
