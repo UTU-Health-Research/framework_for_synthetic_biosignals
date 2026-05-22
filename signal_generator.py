@@ -65,7 +65,7 @@ class SignalGenerator:
         der_raw = np.sum(ders, axis=0)
 
         # Compute the final synthetic signal with numerical integration.
-        synt = integrate.cumtrapz(der_raw, dx=1/fs, initial=0)
+        synt = integrate.cumulative_trapezoid(der_raw, dx=1/fs, initial=0)
 
         # Normalize to range [0, 1].
         synt = utils.min_max_normalize(synt)
